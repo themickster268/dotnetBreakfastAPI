@@ -17,18 +17,12 @@ public class BreakfastsController : ApiController {
 
     [HttpPost]
     public IActionResult CreateBreakfast(CreateBreakfastRequest request){
-        var breakfast = new Breakfast(
-            Guid.NewGuid(),
-            request.Name,
-            request.Description,
-            request.StartDateTime,
-            request.EndDateTime,
-            DateTime.UtcNow,
-            request.Savory,
-            request.Sweet
-        );
-
-        // Todo : Save breakfast to database
+        ErrorOr<Breakfast> requestToBreakfastResult = Breakfast.From(request);
+        if (requestToBreakfastResult.IsError)
+        {
+            return Problem(requestToBreakfastResult.Errors);
+        }
+        var breakfast = requestToBreakfastResult.Value;
         ErrorOr<Created> createdBreakfastResult = _breakfastService.CreateBreakfast(breakfast);
 
         return createdBreakfastResult.Match(
@@ -54,20 +48,15 @@ public class BreakfastsController : ApiController {
     [HttpPut("{id:guid}")]
     public IActionResult UpsertBreakfast(Guid id ,UpsertBreakfastRequest request)
     {
-        var breakfast = new Breakfast(
-            id,
-            request.Name,
-            request.Description,
-            request.StartDateTime,
-            request.EndDateTime,
-            DateTime.UtcNow,
-            request.Savory,
-            request.Sweet
-        );
+        ErrorOr<Breakfast> requestToBreakfastResult = Breakfast.From(id, request);
 
+        if (requestToBreakfastResult.IsError)
+        {
+            return Problem(requestToBreakfastResult.Errors);
+        }
+        var breakfast = requestToBreakfastResult.Value;
         ErrorOr<UpsertedBreakfast> upsertBreakfastResult = _breakfastService.UpsertBreakfast(breakfast);
 
-        // Todo: return 201 if a new breakfast was created
         return upsertBreakfastResult.Match(
             upserted => upserted.IsNewlyCreated ? CreatedAtGetBreakfast(breakfast) : NoContent(),
             errors => Problem(errors)
